@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lenguaje Natural - Limpieza</title>
+  <style>
+    body{font-family: system-ui, Arial, sans-serif; padding:16px;}
+    h1{margin:0 0 12px;}
+    form{margin-bottom:16px;}
+    table{border-collapse: collapse; width:100%; max-width:720px;}
+    th, td{border:1px solid #e5e7eb; padding:8px; text-align:left;}
+    th{background:#f3f4f6;}
+    .ok{color:green}
+  </style>
+</head>
+<body>
+  <h1>Lenguaje Natural</h1>
+  <p>AQUI SE APLICA LA LIMPIEZA DE ARCHIVO TXT <b>minúsculas</b>, <b>sin puntuación</b> y <b>sin stopwords</p>
+  <form action="{% url 'lenguaje_natural:upload' %}" method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    <input type="file" name="file" required />
+    <button type="submit">Subir y procesar</button>
+  </form>
+  {% if msg %}<p class="ok">{{ msg }}</p>{% endif %}
+  {% if tokens %}
+    <h2>Tokens procesados (limpios)</h2>
+    <p style="max-width: 720px; line-height: 1.6">{{ tokens|join:', ' }}</p>
+  {% endif %}
+  {% if tabla %}
+    <h2>Top 30 palabras</h2>
+    <table>
+      <thead><tr><th>#</th><th>Palabra</th><th>Frecuencia</th></tr></thead>
+      <tbody>
+        {% for w,c in tabla %}
+          <tr><td>{{ forloop.counter }}</td><td>{{ w }}</td><td>{{ c }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% endif %}
+</body>
+</html>
