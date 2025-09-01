@@ -1,0 +1,107 @@
+import math
+
+# -------------------------------
+# Funciones estadísticas básicas
+# -------------------------------
+def calcular_media(datos):
+    suma = 0
+    for x in datos:
+        suma += x
+    return suma / len(datos)
+
+def calcular_desviacion(datos, media):
+    suma = 0
+    for x in datos:
+        suma += (x - media) ** 2
+    var = suma / len(datos)
+    return math.sqrt(var)
+
+def contar_en_intervalo(datos, media, sigma, k):
+    limite_inferior = media - k * sigma
+    limite_superior = media + k * sigma
+    contador = 0
+    for x in datos:
+        if limite_inferior <= x <= limite_superior:
+            contador += 1
+    return contador
+
+# -------------------------------
+# Lectura de archivo
+# -------------------------------
+def leer_datos(nombre_archivo):
+    datos = []
+    with open(nombre_archivo, "r") as f:
+        for linea in f:
+            # separar por espacio o coma
+            valores = linea.replace(",", " ").split()
+            for valor in valores:
+                try:
+                    datos.append(float(valor))
+                except:
+                    pass
+    return datos
+
+# -------------------------------
+# Histograma ASCII
+# -------------------------------
+def graficar_histograma(datos, bins=10):
+    minimo = min(datos)
+    maximo = max(datos)
+    rango = (maximo - minimo) / bins
+    frecuencias = [0] * bins
+
+    for x in datos:
+        indice = int((x - minimo) / rango)
+        if indice == bins:  # caso extremo
+            indice -= 1
+        frecuencias[indice] += 1
+
+    print("\nHistograma de frecuencias:")
+    for i in range(len(frecuencias)):
+        izquierda = minimo + i * rango
+        derecha = izquierda + rango
+        barra = ""
+        for _ in range(frecuencias[i]):
+            barra += "*"
+        print(f"[{izquierda:.2f}, {derecha:.2f}) | {barra}")
+
+# -------------------------------
+# Programa principal
+# -------------------------------
+def main():
+    archivo = input("Introduce el nombre del archivo con los datos (txt/xls): ")
+    datos = leer_datos(archivo)
+
+    if len(datos) == 0:
+        print("No se pudieron leer datos.")
+        return
+
+    media = calcular_media(datos)
+    sigma = calcular_desviacion(datos, media)
+
+    total = len(datos)
+    dentro_1 = contar_en_intervalo(datos, media, sigma, 1)
+    dentro_2 = contar_en_intervalo(datos, media, sigma, 2)
+    dentro_3 = contar_en_intervalo(datos, media, sigma, 3)
+
+    p1 = dentro_1 / total * 100
+    p2 = dentro_2 / total * 100
+    p3 = dentro_3 / total * 100
+
+    print("\nResultados:")
+    print(f"Media = {media:.2f}")
+    print(f"Desviación estándar = {sigma:.2f}")
+    print(f"Porcentaje en 1σ: {p1:.2f}% (esperado ≈ 68%)")
+    print(f"Porcentaje en 2σ: {p2:.2f}% (esperado ≈ 95%)")
+    print(f"Porcentaje en 3σ: {p3:.2f}% (esperado ≈ 99.7%)")
+
+    if abs(p1 - 68) < 10 and abs(p2 - 95) < 10 and abs(p3 - 99.7) < 10:
+        print("\nLa base de datos SE PARECE a una distribución normal.")
+    else:
+        print("\nLa base de datos NO corresponde a una distribución normal.")
+
+    graficar_histograma(datos)
+
+# -------------------------------
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,60 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>N-gramas</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Arial; margin: 24px; }
+    form { display: grid; gap: 12px; max-width: 720px; }
+    input, textarea, button { padding: 10px; font-size: 16px; }
+    table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+    th, td { border: 1px solid #ddd; padding: 8px; }
+    th { background: #f3f4f6; text-align: left; }
+    .error { color: #b91c1c; margin-top: 12px; }
+    .hint { color: #6b7280; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <h1>Generación de N-gramas</h1>
+  <p class="hint">Ingresa un texto y elige n (≥ 2) para ver los n-gramas y sus frecuencias. Si tu proyecto ya tokeniza, esta vista intentará usarlo automáticamente.</p>
+
+  <form method="post">
+    {% csrf_token %}
+    <label>
+      Valor de n (≥ 2)
+      <input type="number" name="n" min="2" value="{{ n|default:2 }}" required>
+    </label>
+    <label>
+      Texto de entrada (opcional si integras vía API con tus tokens)
+      <textarea name="text" rows="6" placeholder="Pega tu texto aquí...">{{ text }}</textarea>
+    </label>
+    <button type="submit">Calcular n-gramas</button>
+  </form>
+
+  {% if error %}
+    <p class="error">Error: {{ error }}</p>
+  {% endif %}
+
+  {% if frequencies %}
+    <h2>Frecuencias</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>N-grama</th>
+          <th>Frecuencia</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item, freq in frequencies %}
+        <tr>
+          <td>{{ item }}</td>
+          <td>{{ freq }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% endif %}
+</body>
+</html>

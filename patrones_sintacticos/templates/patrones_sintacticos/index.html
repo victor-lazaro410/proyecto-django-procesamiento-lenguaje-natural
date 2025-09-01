@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang='es'>
+  <head>
+    <meta charset='utf-8'>
+    <meta name='viewport' content='width=device-width, initial-scale=1'>
+    <title>Patrones Sintácticos - Autómata</title>
+    <style>
+      body { font-family: system-ui, Arial, sans-serif; padding:16px; }
+      h1 { margin:0 0 12px; }
+      form { margin-bottom:16px; }
+      .hint { color:#4b5563; font-size:14px; }
+    </style>
+  </head>
+  <body>
+    <h1>Patrones Sintácticos</h1>
+    <p class='hint'>
+      AQUI SE APLICA UN AUTOMATA AL TXT PARA CONVERTIR EL TEXTO EN TOKENS EJEMPLO 
+      <b>PALABRAS RESERVADAS</b> y <b>VARIABLES
+    </p>
+    <form action="{% url 'patrones_sintacticos:upload' %}" method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+      <input type="file" name="file" accept=".txt" required />
+      <button type="submit">Procesar y descargar reporte</button>
+    </form>
+  </body>
+</html>
