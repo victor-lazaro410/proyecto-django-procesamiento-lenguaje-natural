@@ -3,7 +3,7 @@ from django.http import JsonResponse, HttpRequest, HttpResponse
 from django.shortcuts import render
 from django.views.decorators.http import require_http_methods
 
-from .services import default_simple_tokenize, ngram_frequencies
+from .services import default_simple_tokenize, ngram_frequencies, mle_conditional_probabilities, format_prob_table, _split_sentences, add_sentence_boundaries
 
 def _maybe_use_project_tokenizer(text: str):
     """
@@ -96,3 +96,60 @@ def ngrams_api(request: HttpRequest) -> JsonResponse:
         return JsonResponse({"n": n, "frequencies": sorted_items})
     except Exception as ex:
         return JsonResponse({"error": str(ex)}, status=500)
+
+@require_http_methods(["GET", "POST"])
+def ngrams_mle_view(request: HttpRequest) -> HttpResponse:
+    """
+    Página para calcular probabilidades condicionales (MLE) de n-gramas,
+    con y sin fronteras de oración <s>, </s>.
+    """
+    ctx = {"result": None, "error": None}
+    if request.method == "POST":
+        text = request.POST.get("text", "")
+        # Manejo de archivo subido (txt)
+        uploaded_file = request.FILES.get("corpus_file")
+        if uploaded_file and uploaded_file.name.endswith(".txt"):
+            try:
+                text = uploaded_file.read().decode("utf-8")
+            except Exception:
+                ctx["error"] = "No se pudo leer el archivo de texto. Asegúrate que sea UTF-8."
+                return render(request, "ngram/ngrams_mle.html", ctx)
+
+        n_str = request.POST.get("n", "2")
+        try:
+            n = int(n_str)
+            if n < 2:
+                raise ValueError("n debe ser >= 2")
+        except Exception:
+            ctx["error"] = "Debes indicar un entero n >= 2."
+            return render(request, "ngram/ngrams_mle.html", ctx)
+
+        # Tokenización
+        tokens = _maybe_use_project_tokenizer(text)
+
+        # Caso 1: sin fronteras
+        try:
+            probs_no_bound = mle_conditional_probabilities(tokens, n)
+            table_no_bound = format_prob_table(probs_no_bound)
+        except Exception as ex:
+            ctx["error"] = f"Error (sin fronteras): {ex}"
+            return render(request, "ngram/ngrams_mle.html", ctx)
+
+        # Caso 2: con fronteras
+        try:
+            sent_tokens = _split_sentences(text)
+            tokens_with_bounds = add_sentence_boundaries(sent_tokens)
+            probs_with_bound = mle_conditional_probabilities(tokens_with_bounds, n)
+            table_with_bound = format_prob_table(probs_with_bound)
+        except Exception as ex:
+            ctx["error"] = f"Error (con fronteras): {ex}"
+            return render(request, "ngram/ngrams_mle.html", ctx)
+
+        ctx["result"] = {
+            "n": n,
+            "tokens_no_bound": tokens,
+            "tokens_with_bound": tokens_with_bounds,
+            "probs_no_bound": table_no_bound,
+            "probs_with_bound": table_with_bound
+        }
+    return render(request, "ngram/ngrams_mle.html", ctx)

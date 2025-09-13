@@ -1,3 +1,4 @@
+import re
 from collections import Counter
 from typing import List, Tuple
 
@@ -34,3 +35,43 @@ def default_simple_tokenize(text: str) -> List[str]:
     text = text.lower()
     tokens = re.findall(r"[a-záéíóúñü0-9]+", text, flags=re.IGNORECASE)
     return tokens
+
+from typing import Dict, Iterable, List, Tuple
+from collections import Counter
+
+def _split_sentences(text: str) -> List[List[str]]:
+    """Divide el texto en oraciones y tokeniza cada una usando default_simple_tokenize."""
+    if not text:
+        return []
+    raw = re.split(r'[.!?]+', text)
+    sents: List[List[str]] = []
+    for s in raw:
+        toks = default_simple_tokenize(s)
+        if toks:
+            sents.append(toks)
+    return sents
+
+def add_sentence_boundaries(sent_tokens: List[List[str]], bos: str = "<s>", eos: str = "</s>") -> List[str]:
+    """Agrega <s> y </s> por oración y aplana."""
+    seq: List[str] = []
+    for s in sent_tokens:
+        seq.extend([bos, *s, eos])
+    return seq
+
+def mle_conditional_probabilities(tokens: List[str], n: int) -> Dict[Tuple[str, ...], float]:
+    if n < 2:
+        raise ValueError("n debe ser >= 2 para probabilidades condicionales")
+    n_counts = Counter(tuple(tokens[i:i+n]) for i in range(len(tokens)-n+1))
+    prefix_counts = Counter(tuple(tokens[i:i+n-1]) for i in range(len(tokens)-n+2))
+    probs: Dict[Tuple[str, ...], float] = {}
+    for ng, c in n_counts.items():
+        prefix = ng[:-1]
+        denom = prefix_counts.get(prefix, 0)
+        if denom > 0:
+            probs[ng] = c / denom
+    return probs
+
+def format_prob_table(probs: Dict[Tuple[str, ...], float], join_with: str = " ") -> List[Tuple[str, float]]:
+    items = [(join_with.join(ng), p) for ng, p in probs.items()]
+    items.sort(key=lambda kv: (-kv[1], kv[0]))
+    return items

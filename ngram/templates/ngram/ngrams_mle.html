@@ -1,0 +1,91 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>N-gramas MLE (con y sin fronteras)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Arial; margin: 24px; }
+    form { display: grid; gap: 12px; max-width: 900px; }
+    input, textarea, button, select { padding: 10px; font-size: 16px; }
+    table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+    th, td { border: 1px solid #ddd; padding: 8px; }
+    th { background: #f3f4f6; text-align: left; }
+    .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .error { color: #b91c1c; margin-top: 12px; }
+    .hint { color: #6b7280; font-size: 14px; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 9999px; background:#eef2ff; color:#3730a3; font-size: 12px; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+  </style>
+</head>
+<body>
+  <h1>N-gramas • Probabilidades condicionales (MLE)</h1>
+  <p class="hint">
+    Objetivo: Calcular <span class="mono">P(w_n | w_{1..n-1})</span> por MLE y comparar resultados con y sin tokens de frontera <span class="mono">&lt;s&gt;</span>, <span class="mono">&lt;/s&gt;</span>.
+  </p>
+
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    <label>Corpus base (texto libre):</label>
+    <textarea name="text" rows="6" placeholder="Escribe o pega tu corpus aquí...">{{ request.POST.text }}</textarea>
+
+    <label>n (>=2):</label>
+    <input type="number" name="n" min="2" value="{{ request.POST.n|default:2 }}" />
+
+    <label>O cargar archivo .txt:</label>
+    <input type="file" name="corpus_file" accept=".txt" />
+
+    <button type="submit">Calcular MLE</button>
+  </form>
+
+  {% if error %}
+    <div class="error">{{ error }}</div>
+  {% endif %}
+
+  {% if result %}
+    <h2>Resultados</h2>
+    <p><span class="badge">n = {{ result.n }}</span></p>
+
+    <div class="cols">
+      <div>
+        <h3>Sin fronteras de oración</h3>
+        <table>
+          <thead>
+            <tr><th>n-grama</th><th>Probabilidad MLE</th></tr>
+          </thead>
+          <tbody>
+            {% for item, p in result.probs_no_bound %}
+            <tr>
+              <td class="mono">{{ item }}</td>
+              <td>{{ p|floatformat:6 }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="2">No se generaron n-gramas.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <div>
+        <h3>Con fronteras &lt;s&gt; ... &lt;/s&gt;</h3>
+        <table>
+          <thead>
+            <tr><th>n-grama</th><th>Probabilidad MLE</th></tr>
+          </thead>
+          <tbody>
+            {% for item, p in result.probs_with_bound %}
+            <tr>
+              <td class="mono">{{ item }}</td>
+              <td>{{ p|floatformat:6 }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="2">No se generaron n-gramas.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  {% endif %}
+</body>
+</html>
