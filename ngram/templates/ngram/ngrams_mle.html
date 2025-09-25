@@ -26,6 +26,15 @@
   </p>
 
   <form method="post" enctype="multipart/form-data">
+
+    <label>Seleccionar corpus de ejemplo:</label>
+    <select name="corpus_choice" id="corpus_choice">
+      <option value="">(Ninguno)</option>
+      <option value="literario" {% if default_corpus_choice == "literario" %}selected{% endif %}>Texto literario</option>
+      <option value="tecnico" {% if default_corpus_choice == "tecnico" %}selected{% endif %}>Texto técnico</option>
+    </select>
+    <small>Puedes cambiar de corpus o pegar el tuyo. Si el cuadro está vacío, se precargará el seleccionado.</small>
+    
     {% csrf_token %}
     <label>Corpus base (texto libre):</label>
     <textarea name="text" rows="6" placeholder="Escribe o pega tu corpus aquí...">{{ request.POST.text }}</textarea>
@@ -34,9 +43,9 @@
     <input type="number" name="n" min="2" value="{{ request.POST.n|default:2 }}" />
 
     <label>O cargar archivo .txt:</label>
-    <input type="file" name="corpus_file" accept=".txt" />
-
-    <button type="submit">Calcular MLE</button>
+<label>Subir .txt (personalizado):</label>
+<input type="file" name="corpus_file" accept=".txt" />
+<button type="submit">Calcular MLE</button>
   </form>
 
   {% if error %}
@@ -87,5 +96,65 @@
       </div>
     </div>
   {% endif %}
+<p style="margin-top:24px"><a href="/ngrams/autocomplete/">Ir a Autocompletar (MLE)</a></p><p style="margin-top:16px"><a href="/lenguaje/">Volver a Lenguaje</a></p>
+<script type="application/json" id="presets-json">{{ preset_corpora|safe }}</script>
+<script>
+(function(){
+  try{
+    var raw = document.getElementById('presets-json').textContent || '{}';
+    var presets = (typeof raw === 'string') ? JSON.parse(raw.replace(/'/g,'"')) : {};
+  }catch(e){ presets = {}; }
+  var sel = document.getElementById('corpus_choice');
+  var ta = document.querySelector('textarea[name="text"]');
+  function fillIfEmpty(){
+    if(ta && (!ta.value || ta.value.trim()==='')){
+      var k = (sel && sel.value) || 'julieta';
+      if(presets[k]){ ta.value = presets[k]; }
+    }
+  }
+  function onChange(){
+    if(ta){
+      var k = sel && sel.value;
+      if(presets[k]){ ta.value = presets[k]; }
+    }
+  }
+  if(sel){ sel.addEventListener('change', onChange); }
+  fillIfEmpty();
+})();
+</script>
+
+
+  {% if comparison %}
+  <h3>Comparación de P(w|h) (n={{ comparison.n }}, fronteras={{ comparison.usar_fronteras }})</h3>
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+    <div>
+      <h4>{{ comparison.a.label }}</h4>
+      <table>
+        <thead><tr><th>N-grama</th><th>P(w|h)</th></tr></thead>
+        <tbody>
+        {% for item, p in comparison.a.probs|slice:":100" %}
+          <tr><td>{{ item }}</td><td>{{ p|floatformat:4 }}</td></tr>
+        {% empty %}
+          <tr><td colspan="2">Sin datos.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div>
+      <h4>{{ comparison.b.label }}</h4>
+      <table>
+        <thead><tr><th>N-grama</th><th>P(w|h)</th></tr></thead>
+        <tbody>
+        {% for item, p in comparison.b.probs|slice:":100" %}
+          <tr><td>{{ item }}</td><td>{{ p|floatformat:4 }}</td></tr>
+        {% empty %}
+          <tr><td colspan="2">Sin datos.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
 </body>
 </html>

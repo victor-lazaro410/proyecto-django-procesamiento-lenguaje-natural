@@ -1,0 +1,201 @@
+
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Autocompletar con n-gramas (MLE)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Ubuntu, Cantarell, Noto Sans, Arial; margin: 24px; }
+    form { display: grid; gap: 12px; max-width: 900px; }
+    input, textarea, button, select { padding: 10px; font-size: 16px; }
+    table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+    th, td { border: 1px solid #ddd; padding: 8px; }
+    th { background: #f3f4f6; text-align: left; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+    .note { color: #555; font-size: 14px; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .card { border: 1px solid #e5e7eb; border-radius: 10px; padding: 12px; margin-top: 16px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);}
+  </style>
+</head>
+<body>
+  <h1>N-gramas • Probabilidades condicionales (Autocomplete MLE)</h1>
+      <details class="card">
+        <summary><strong>Requisitos del PDF (Interfaz)</strong></summary>
+        <ul>
+          <li>Entrada de texto</li>
+          <li>Botón <em>Sugerir</em></li>
+          <li>Salida: sugerencia + tabla Top-3 con probabilidades</li>
+          <li>Opciones: seleccionar corpus, elegir n (1/2/3), activar/desactivar fronteras</li>
+        </ul>
+      </details>
+    
+  <p class="note">Selecciona un corpus (opcional), elige el orden del n-grama, activa o no fronteras de oración y escribe tu contexto.</p>
+  <form method="post" enctype="multipart/form-data">
+
+    <label>Seleccionar corpus de ejemplo:</label>
+    <select name="corpus_choice" id="corpus_choice">
+      <option value="">(Ninguno)</option>
+      <option value="literario" {% if default_corpus_choice == "literario" %}selected{% endif %}>Texto literario</option>
+      <option value="tecnico" {% if default_corpus_choice == "tecnico" %}selected{% endif %}>Texto técnico</option>
+    </select>
+    <small>Puedes cambiar de corpus o pegar el tuyo. Si el cuadro está vacío, se precargará el seleccionado.</small>
+    
+    {% csrf_token %}
+    <label>Archivo personalizado (opcional): {{ form.corpus_id }}<small class="note"> </small></label>
+    <div class="grid-2">
+      <label>Orden n-grama: {{ form.n }}</label>
+      <label>{{ form.usar_fronteras }} {{ form.usar_fronteras.label }}</label>
+    </div>
+    <label>Contexto:</label>
+    {{ form.contexto }}
+    <div><small>o bien:</small> {{ form.archivo }}</div>
+    <label>Subir .txt (personalizado):</label>
+<input type="file" name="corpus_file" accept=".txt" />
+<button type="submit">Sugerir</button>
+  </form>
+
+  <h2>Resultados</h2>
+
+
+  {% if resultado %}
+  <div class="card">
+    <h2>Resultados</h2>
+    <p class="note">n = {{ resultado.n }} — tokens del corpus: {{ resultado.num_tokens_corpus }}</p>
+    <p><strong>Sugerencia:</strong> <span class="mono">{{ resultado.sugerencia }}</span></p>
+    <div class="grid-2">
+      <div>
+        <h3>Sin fronteras de oración</h3>
+        <table>
+          <thead><tr><th>Palabra</th><th>Probabilidad</th></tr></thead>
+          <tbody>
+          {% for ng, p in resultado.full_no_bound %}
+            <tr><td class="mono">{{ ng }}</td><td>{{ p|floatformat:6 }}</td></tr>
+          {% empty %}
+            <tr><td colspan="2">Sin n-gramas.</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div>
+        <h3>Con fronteras &lt;s&gt; … &lt;/s&gt;</h3>
+        <table>
+          <thead><tr><th>Palabra</th><th>Probabilidad</th></tr></thead>
+          <tbody>
+          {% for ng, p in resultado.full_with_bound %}
+            <tr><td class="mono">{{ ng }}</td><td>{{ p|floatformat:6 }}</td></tr>
+          {% empty %}
+            <tr><td colspan="2">Sin n-gramas.</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+{% endif %}
+  </div>
+  <!-- Sección nueva: Comparación de textos (literario vs personalizado) -->
+  <div class="card">
+    <h2>Comparación de textos (MLE) — <span class="note">Sin fronteras</span></h2>
+    {% if comparison_nb %}
+    <div class="grid-2">
+      <div>
+        <h3>{{ comparison_nb.a.label }}</h3>
+        <table>
+          <thead><tr><th>N-grama</th><th>P(w|h)</th></tr></thead>
+          <tbody>
+          {% for ng, p in comparison_nb.a.probs|slice:":30" %}
+            <tr><td class="mono">{{ ng }}</td><td>{{ p|floatformat:6 }}</td></tr>
+          {% empty %}
+            <tr><td colspan="2">Sin datos.</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div>
+        <h3>{{ comparison_nb.b.label }}</h3>
+        <table>
+          <thead><tr><th>N-grama</th><th>P(w|h)</th></tr></thead>
+          <tbody>
+          {% for ng, p in comparison_nb.b.probs|slice:":30" %}
+            <tr><td class="mono">{{ ng }}</td><td>{{ p|floatformat:6 }}</td></tr>
+          {% empty %}
+            <tr><td colspan="2">Sin datos.</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% else %}
+      <p class="note">No se pudo construir la comparación sin fronteras.</p>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <h2>Comparación de textos (MLE) — <span class="note">Con fronteras &lt;s&gt; &lt;/s&gt;</span></h2>
+    {% if comparison_wb %}
+    <div class="grid-2">
+      <div>
+        <h3>{{ comparison_wb.a.label }}</h3>
+        <table>
+          <thead><tr><th>N-grama</th><th>P(w|h)</th></tr></thead>
+          <tbody>
+          {% for ng, p in comparison_wb.a.probs|slice:":30" %}
+            <tr><td class="mono">{{ ng }}</td><td>{{ p|floatformat:6 }}</td></tr>
+          {% empty %}
+            <tr><td colspan="2">Sin datos.</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div>
+        <h3>{{ comparison_wb.b.label }}</h3>
+        <table>
+          <thead><tr><th>N-grama</th><th>P(w|h)</th></tr></thead>
+          <tbody>
+          {% for ng, p in comparison_wb.b.probs|slice:":30" %}
+            <tr><td class="mono">{{ ng }}</td><td>{{ p|floatformat:6 }}</td></tr>
+          {% empty %}
+            <tr><td colspan="2">Sin datos.</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% else %}
+      <p class="note">No se pudo construir la comparación con fronteras.</p>
+    {% endif %}
+  </div>
+
+
+
+<p style="margin-top:16px"><a href="/lenguaje/">Volver a Lenguaje</a></p>
+<script type="application/json" id="presets-json">{{ preset_corpora|safe }}</script>
+<script>
+(function(){
+  try{
+    var raw = document.getElementById('presets-json').textContent || '{}';
+    var presets = (typeof raw === 'string') ? JSON.parse(raw.replace(/'/g,'"')) : {};
+  }catch(e){ presets = {}; }
+  var sel = document.getElementById('corpus_choice');
+  var ta = document.querySelector('textarea[name="text"]');
+  function fillIfEmpty(){
+    if(ta && (!ta.value || ta.value.trim()==='')){
+      var k = (sel && sel.value) || 'julieta';
+      if(presets[k]){ ta.value = presets[k]; }
+    }
+  }
+  function onChange(){
+    if(ta){
+      var k = sel && sel.value;
+      if(presets[k]){ ta.value = presets[k]; }
+    }
+  }
+  if(sel){ sel.addEventListener('change', onChange); }
+  fillIfEmpty();
+})();
+</script>
+
+</body>
+</html>

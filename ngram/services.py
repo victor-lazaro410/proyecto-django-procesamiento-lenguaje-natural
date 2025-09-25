@@ -1,66 +1,56 @@
+
 import re
 from collections import Counter
-from typing import List, Tuple
+from typing import List, Tuple, Dict
+
+TOKEN_RE = re.compile(r"<\/?s>|[\wáéíóúñüÁÉÍÓÚÑÜ]+|[\.\!\?]", flags=re.UNICODE)
+
+def default_simple_tokenize(text: str) -> List[str]:
+    if not isinstance(text, str):
+        text = str(text or "")
+    text = text.strip().lower()
+    return [t for t in TOKEN_RE.findall(text) if t]
+
+def _split_sentences(tokens: List[str]) -> List[List[str]]:
+    sents, cur = [], []
+    for t in tokens:
+        if t in {".", "!", "?"}:
+            if cur:
+                sents.append(cur); cur = []
+        else:
+            cur.append(t)
+    if cur:
+        sents.append(cur)
+    return sents
+
+def add_sentence_boundaries(sent_tokens: List[List[str]]) -> List[str]:
+    out = []
+    for s in sent_tokens:
+        out.extend(["<s>", "<s>"] + s + ["</s>"])
+    return out
 
 def generate_ngrams_from_tokens(tokens: List[str], n: int) -> List[Tuple[str, ...]]:
-    """
-    Genera n-gramas contiguos (n > 1) a partir de una lista de tokens.
-    No aplica padding; si len(tokens) < n, devuelve lista vacía.
-    """
-    if not isinstance(n, int) or n < 2:
-        raise ValueError("n debe ser un entero >= 2")
-    if not tokens:
-        return []
+    if not isinstance(n, int) or n < 1:
+        raise ValueError("n debe ser >= 1")
+    if n == 1:
+        return [(t,) for t in tokens]
     N = len(tokens)
     return [tuple(tokens[i:i+n]) for i in range(0, max(0, N - n + 1))]
 
-def ngram_frequencies(tokens: List[str], n: int, join_with: str = " ") -> Counter:
-    """
-    Devuelve un Counter con frecuencias de n-gramas (clave = string del n-grama unido por 'join_with').
-    """
+def ngram_frequencies(tokens: List[str], n: int, join_with: str = " ") -> List[Tuple[str, int]]:
+    """ Devuelve lista [("token1 token2", conteo), ...] ordenada desc por conteo. """
     ngrams = generate_ngrams_from_tokens(tokens, n)
-    joined = [join_with.join(tup) for tup in ngrams]
-    return Counter(joined)
-
-def default_simple_tokenize(text: str) -> List[str]:
-    """
-    Fallback de tokenización simple (minúsculas, caracteres alfabéticos y dígitos).
-    Se intenta integrar con el flujo existente: si el proyecto expone una función `tokenize`,
-    se puede invocar desde la vista (ver views.py). Este método sirve como respaldo.
-    """
-    import re
-    if not text:
-        return []
-    # Sustituye cualquier carácter no alfanumérico por espacios y divide
-    text = text.lower()
-    tokens = re.findall(r"[a-záéíóúñü0-9]+", text, flags=re.IGNORECASE)
-    return tokens
-
-from typing import Dict, Iterable, List, Tuple
-from collections import Counter
-
-def _split_sentences(text: str) -> List[List[str]]:
-    """Divide el texto en oraciones y tokeniza cada una usando default_simple_tokenize."""
-    if not text:
-        return []
-    raw = re.split(r'[.!?]+', text)
-    sents: List[List[str]] = []
-    for s in raw:
-        toks = default_simple_tokenize(s)
-        if toks:
-            sents.append(toks)
-    return sents
-
-def add_sentence_boundaries(sent_tokens: List[List[str]], bos: str = "<s>", eos: str = "</s>") -> List[str]:
-    """Agrega <s> y </s> por oración y aplana."""
-    seq: List[str] = []
-    for s in sent_tokens:
-        seq.extend([bos, *s, eos])
-    return seq
+    c = Counter(ngrams)
+    items = [(join_with.join(ng), cnt) for ng, cnt in c.items()]
+    items.sort(key=lambda kv: (-kv[1], kv[0]))
+    return items
 
 def mle_conditional_probabilities(tokens: List[str], n: int) -> Dict[Tuple[str, ...], float]:
-    if n < 2:
-        raise ValueError("n debe ser >= 2 para probabilidades condicionales")
+    """ Devuelve P(w|h) para todos los n-gramas (n>=2). Para n=1 devuelve frecuencias relativas. """
+    if n <= 1:
+        uni = Counter(tokens)
+        total = sum(uni.values()) or 1
+        return {(w,): c/total for w, c in uni.items()}
     n_counts = Counter(tuple(tokens[i:i+n]) for i in range(len(tokens)-n+1))
     prefix_counts = Counter(tuple(tokens[i:i+n-1]) for i in range(len(tokens)-n+2))
     probs: Dict[Tuple[str, ...], float] = {}

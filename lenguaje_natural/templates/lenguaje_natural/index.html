@@ -16,55 +16,54 @@
 </head>
 <body>
   <h1>Lenguaje Natural</h1>
-  <p>AQUI SE APLICA LA LIMPIEZA DE ARCHIVO TXT <b>minúsculas</b>, <b>sin puntuación</b> y <b>sin stopwords</p>
-  <form action="{% url 'lenguaje_natural:upload' %}" method="post" enctype="multipart/form-data">
+  <p>AQUI SE APLICA LA LIMPIEZA DE ARCHIVO TXT <strong>minúsculas, sin puntuación y sin stopwords</strong></p>
+
+  <!-- Subir archivo (solo guarda, no calcula) -->
+  <form method="post" enctype="multipart/form-data" action="/lenguaje/upload/">
     {% csrf_token %}
-    <input type="file" name="file" required />
-    <button type="submit">Subir y procesar</button>
+    {{ form.file }}
+    <input type="submit" value="Subir y procesar">
   </form>
+
+  <hr />
+
+  <h2>Calcular n-gramas bajo demanda</h2>
+  <form method="get" action="/lenguaje/calcular/">
+    <label for="n">Elegir n:</label>
+    <input type="number" name="n" id="n" value="2" min="2" step="1" style="width:6ch">
+    <button type="submit">Calcular</button>
+  </form>
+  <p>También puedes usar: <a href="/ngrams/mle/">MLE</a> | <a href="/ngrams/autocomplete/">Autocomplete</a></p>
+
   {% if msg %}<p class="ok">{{ msg }}</p>{% endif %}
+
   {% if tokens %}
-    <h2>Tokens procesados (limpios)</h2>
-    <p style="max-width: 720px; line-height: 1.6">{{ tokens|join:', ' }}</p>
+    <h3>Tokens procesados (limpios)</h3>
+    <p style="max-width: 720px; line-height: 1.6">{{ tokens|join:", " }}</p>
   {% endif %}
+
   {% if tabla %}
-    <h2>Top 30 palabras</h2>
+    <h3>Top 30 palabras (unigramas)</h3>
     <table>
       <thead><tr><th>#</th><th>Palabra</th><th>Frecuencia</th></tr></thead>
       <tbody>
-        {% for w,c in tabla %}
-          <tr><td>{{ forloop.counter }}</td><td>{{ w }}</td><td>{{ c }}</td></tr>
+        {% for g,c in tabla %}
+          <tr><td>{{ forloop.counter }}</td><td>{{ g }}</td><td>{{ c }}</td></tr>
         {% endfor %}
       </tbody>
     </table>
   {% endif %}
 
-
-
-
-{% if bigram_tabla %}
-  <h2>Bigramas (n=2)</h2>
-  <table>
-    <thead><tr><th>#</th><th>Bigramas</th><th>Frecuencia</th></tr></thead>
-    <tbody>
-      {% for g,c in bigram_tabla %}
-        <tr><td>{{ forloop.counter }}</td><td>{{ g }}</td><td>{{ c }}</td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
-{% endif %}
-
-{% if trigram_tabla %}
-  <h2>Trigramas (n=3)</h2>
-  <table>
-    <thead><tr><th>#</th><th>Trigramas</th><th>Frecuencia</th></tr></thead>
-    <tbody>
-      {% for g,c in trigram_tabla %}
-        <tr><td>{{ forloop.counter }}</td><td>{{ g }}</td><td>{{ c }}</td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
-{% endif %}
-
+  {% if ngram_tabla %}
+    <h3>N-gramas (n={{ ngram_n }})</h3>
+    <table>
+      <thead><tr><th>#</th><th>Texto</th><th>Frecuencia</th></tr></thead>
+      <tbody>
+        {% for g,c in ngram_tabla %}
+          <tr><td>{{ forloop.counter }}</td><td>{{ g }}</td><td>{{ c }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% endif %}
 </body>
 </html>

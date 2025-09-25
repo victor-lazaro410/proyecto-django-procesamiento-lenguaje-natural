@@ -1,7 +1,0 @@
-feat(ngrams): generación configurable de n-gramas y frecuencias integrada sin romper flujo existente
-
-- Crea app `ngram` con servicios para generar n-gramas (n>1) y contar frecuencias
-- Vista HTML y endpoint JSON para mostrar/obtener frecuencias
-- Intento de integración con tokenizador del proyecto si existe; fallback simple
-- Agrega `ngram` a INSTALLED_APPS y rutas en urls.py
-- Incluye pruebas unitarias (pytest) para servicios y casos borde

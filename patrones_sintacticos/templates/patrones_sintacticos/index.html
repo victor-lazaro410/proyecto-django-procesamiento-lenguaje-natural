@@ -1,26 +1,76 @@
+
 <!doctype html>
 <html lang='es'>
   <head>
     <meta charset='utf-8'>
     <meta name='viewport' content='width=device-width, initial-scale=1'>
-    <title>Patrones Sintácticos - Autómata</title>
+    <title>Patrones Sintácticos - Autómata (Lexer + Parser)</title>
     <style>
       body { font-family: system-ui, Arial, sans-serif; padding:16px; }
-      h1 { margin:0 0 12px; }
+      h1,h2,h3 { margin:10px 0; }
       form { margin-bottom:16px; }
       .hint { color:#4b5563; font-size:14px; }
+      table{border-collapse:collapse; width:100%; max-width:980px;}
+      th,td{border:1px solid #e5e7eb; padding:6px 8px; text-align:left;}
+      th{background:#f3f4f6;}
+      pre { background:#0b1020; color:#e5e7eb; padding:12px; overflow:auto; border-radius:8px; }
+      .grid{display:grid; grid-template-columns: 1fr 1fr; gap:16px;}
+      .ok{color:#065f46}
+      .err{color:#b91c1c}
+      .badge{display:inline-block; padding:2px 8px; border-radius:12px; background:#eef2ff;}
     </style>
   </head>
   <body>
-    <h1>Patrones Sintácticos</h1>
+    <h1>Patrones Sintácticos (Autómata de tokenización + Gramática)</h1>
     <p class='hint'>
-      AQUI SE APLICA UN AUTOMATA AL TXT PARA CONVERTIR EL TEXTO EN TOKENS EJEMPLO 
-      <b>PALABRAS RESERVADAS</b> y <b>VARIABLES
+      Reconoce <b>palabras reservadas</b>, <b>identificadores</b>, <b>números</b> (int/float/hex/bin/oct),
+      <b>cadenas</b>, <b>caracteres</b>, <b>operadores</b>, <b>delimitadores</b> y <b>comentarios</b>. Luego intenta parsear con la gramática.
     </p>
     <form action="{% url 'patrones_sintacticos:upload' %}" method="post" enctype="multipart/form-data">
       {% csrf_token %}
       <input type="file" name="file" accept=".txt" required />
-      <button type="submit">Procesar y descargar reporte</button>
+      <button type="submit">Analizar</button>
     </form>
+
+    {% if grammar %}
+      <h2>Gramática</h2>
+      <ul>{% for g in grammar %}<li><code>{{ g }}</code></li>{% endfor %}</ul>
+    {% endif %}
+
+    {% if parse_error %}
+      <h2 class="err">Error sintáctico</h2>
+      <p class="err">Línea {{ parse_error.line }}, Col {{ parse_error.col }} — {{ parse_error.message }}</p>
+      {% if parse_error.expected %}<p class="hint">Se esperaba: {{ parse_error.expected|join:', ' }}</p>{% endif %}
+    {% elif parse_tree %}
+      <h2 class="ok">Parseo correcto</h2>
+      <pre>{{ parse_tree|join:"\n" }}</pre>
+    {% endif %}
+
+    {% if counts %}
+      <h2>Resumen de tokens</h2>
+      <ul>{% for k,v in counts.items %}<li><span class="badge">{{ k }}</span> — {{ v }}</li>{% endfor %}</ul>
+    {% endif %}
+
+    {% if tokens %}
+      <h2>Tokens</h2>
+      <table>
+        <thead><tr><th>#</th><th>Tipo</th><th>Lexema</th><th>Línea</th><th>Columna</th></tr></thead>
+        <tbody>
+          {% for t in tokens %}
+            <tr>
+              <td>{{ forloop.counter }}</td>
+              <td>{{ t.type }}</td>
+              <td><code>{{ t.lexeme }}</code></td>
+              <td>{{ t.line }}</td>
+              <td>{{ t.col }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% endif %}
+
+    {% if download_url %}
+      <p><a href="{{ download_url }}" download>Descargar tokens (TSV)</a></p>
+    {% endif %}
   </body>
 </html>

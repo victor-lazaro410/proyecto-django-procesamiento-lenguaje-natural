@@ -1,0 +1,3 @@
+<s><s>Un algoritmo es una secuencia finita de pasos que resuelve un problema. En análisis de algoritmos se estudia el costo
+computacional en tiempo y espacio. Las estructuras de datos como pilas, colas y árboles optimizan operaciones frecuentes</s>.
+<s><s>La complejidad temporal O(n log n) es típica de algoritmos de ordenamiento eficientes como mergesort y heapsort</s>.</s>
